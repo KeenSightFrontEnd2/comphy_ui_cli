@@ -1,0 +1,11 @@
+{
+    "model_search_paths": [
+      "models"
+    ],
+    "default_settings": {
+      "gpu": true,
+      "max_memory_usage": "8GB",
+      "default_model": "stable-diffusion"
+    }
+  }
+  
