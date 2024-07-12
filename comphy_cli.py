@@ -1,5 +1,6 @@
 import click
 import subprocess
+from PIL import Image
 
 def run_command(command):
     try:
@@ -7,6 +8,34 @@ def run_command(command):
         click.echo(result.stdout.decode())
     except subprocess.CalledProcessError as e:
         click.echo(f"Error: {e.stderr.decode()}", err=True)
+
+def change_aspect_ratio(image_path, target_aspect_ratio, output_path):
+    # Open the image
+    image = Image.open(image_path)
+    
+    # Get current dimensions
+    width, height = image.size
+    current_aspect_ratio = width / height
+    
+    # Determine new dimensions
+    if current_aspect_ratio < target_aspect_ratio:
+        # Extend width
+        new_width = int(target_aspect_ratio * height)
+        new_height = height
+    else:
+        # Extend height
+        new_width = width
+        new_height = int(width / target_aspect_ratio)
+    
+    # Resize the image to the new dimensions
+    resized_image = image.resize((new_width, new_height), Image.LANCZOS)
+    
+    # Create a new image with the target aspect ratio and paste the resized image onto it
+    new_image = Image.new("RGB", (new_width, new_height))
+    new_image.paste(resized_image)
+    
+    # Save the resulting image
+    new_image.save(output_path)
 
 @click.group()
 def cli():
@@ -82,6 +111,27 @@ def run_custom(command):
     """Run a custom Comphy UI command."""
     run_command(command)
 
+@click.command()
+@click.argument('image_path')
+@click.argument('target_aspect_ratio', type=float)
+@click.argument('output_path')
+def resize_image(image_path, target_aspect_ratio, output_path):
+    """Resize an image to a specified aspect ratio."""
+    change_aspect_ratio(image_path, target_aspect_ratio, output_path)
+    click.echo(f"Image saved to {output_path}")
+
+@click.command()
+@click.argument('prompt')
+@click.argument('resolution', type=str)
+@click.argument('output_path')
+def generate_image(prompt, resolution, output_path):
+    """Generate an image based on a prompt and resolution."""
+    width, height = map(int, resolution.split('x'))
+    # Command to generate image using comfy-cli
+    command = f"comfy generate --prompt \"{prompt}\" --width {width} --height {height} --output {output_path}"
+    run_command(command)
+    click.echo(f"Image generated and saved to {output_path}")
+
 # Adding commands to the CLI group
 cli.add_command(start_ui)
 cli.add_command(stop_ui)
@@ -93,6 +143,8 @@ cli.add_command(load_from_image)
 cli.add_command(save_workflow)
 cli.add_command(set_config)
 cli.add_command(run_custom)
+cli.add_command(resize_image)
+cli.add_command(generate_image)
 
 if __name__ == "__main__":
     cli()
